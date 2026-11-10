@@ -1,235 +1,239 @@
-# Shelly през LoRa - управление на устройство без мрежа
+# Shelly over LoRa - controlling a device with no network
 
-Два Shelly си говорят по радио, без WiFi между тях.
+Two Shelly devices talk to each other over radio, with no WiFi between them.
 
-Едното устройство стои там, където има мрежа. Другото стои там, където мрежа
-няма - в мазето, в плевнята, в другата сграда - и **WiFi-ът му е изключен
-нарочно**. Връзката между двата е LoRa радио.
+One device sits where there is a network. The other sits where there is none -
+the cellar, the barn, the next building - and **its WiFi is switched off on
+purpose**. The link between them is LoRa radio.
 
-Този, който е в мрежата, показва другия при себе си: токът, напрежението,
-температурата и ключът на далечния се появяват като негови собствени сензори.
-Каквото вече чете първия Shelly - Home Assistant, приложението на Shelly, MQTT,
-каквото и да е - вижда и втория през него, без да прави нищо допълнително.
+The one on the network shows the other one at itself: the far device's current,
+voltage, temperature and switch appear as its own sensors. Whatever already
+reads the first Shelly - Home Assistant, the Shelly app, MQTT, anything - sees
+the second one through it, with no extra work.
 
-Нужен е **един файл**, качен на двата Shelly. Нищо не се инсталира на компютър.
+You need **one file**, put on both Shelly devices. Nothing is installed on a
+computer.
 
----
-
-## ⚠ Първо това
-
-Тези устройства се монтират на **230 V**. Ако не си сменял контакт сам, не
-започвай оттук - дай монтажа на електротехник, а после се върни за софтуера.
-
-- Винаги **изключвай бушона**, преди да пипнеш кабел.
-- По време на настройката **не връзвай нищо към релето**. Нека щрака на празно.
-- LoRa аддонът се слага и маха **само при изключено захранване**.
+> На български: [README.bg.md](README.bg.md)
 
 ---
 
-## Речник - 6 думи
+## ⚠ Read this first
 
-| дума | какво значи |
+These devices are wired to **230 V**. If you have never replaced a wall socket
+yourself, do not start here - have an electrician do the wiring, then come back
+for the software part.
+
+- Always **switch off the breaker** before touching a wire.
+- During setup, **connect nothing to the relay**. Let it click on nothing.
+- The LoRa add-on goes on and comes off **only with the power off**.
+
+---
+
+## Six words you will meet
+
+| word | what it means |
 |---|---|
-| **гейт** (gateway) | Shelly-то, което остава в WiFi мрежата. Той "превежда". |
-| **възел** (node) | Shelly-то без мрежа, далечното. |
-| **LoRa** | Радио за далечни разстояния, но много бавно. Пренася малки съобщения. |
-| **аддон** | Малката платка, която се щрака върху Shelly и му дава LoRa. |
-| **скрипт** | Програмка, която живее вътре в Shelly. Тази тук е един файл. |
-| **виртуален компонент** | Измислен сензор или ключ вътре в Shelly. Гейтът си прави 10 такива, за да показва възела. |
+| **gateway** | The Shelly that stays on the WiFi network. It does the translating. |
+| **node** | The Shelly with no network, the far one. |
+| **LoRa** | Radio for long distances, but very slow. Carries small messages. |
+| **add-on** | The small board that clips onto a Shelly and gives it LoRa. |
+| **script** | A small program that lives inside the Shelly. This one is a single file. |
+| **virtual component** | A made-up sensor or switch inside a Shelly. The gateway creates 10 of them to show the node. |
 
 ---
 
-## Какво ти трябва
+## What you need
 
-- **2 броя Shelly** с поддръжка на LoRa аддон. Тествано на **Shelly 1 PM Gen4**,
-  фърмуер **2.0.0**.
-- **2 броя Shelly LoRa Add-On** с антените.
-- Компютър или телефон с браузър, в същата мрежа като двата Shelly.
-- 20-30 минути.
+- **2 Shelly devices** that support the LoRa add-on. Tested on
+  **Shelly 1 PM Gen4**, firmware **2.0.0**.
+- **2 Shelly LoRa Add-Ons**, with their antennas.
+- A computer or phone with a browser, on the same network as both Shelly
+  devices.
+- 20-30 minutes.
 
 ---
 
-## Как ще изглежда накрая
+## What it will look like when done
 
 ```
-   [ гейт ]  --- WiFi --->  рутер, Home Assistant, телефон
-      |
-      | LoRa радио, 868 MHz
-      v
-   [ възел ]  (без WiFi, само радио)
+   [ gateway ]  --- WiFi --->  router, Home Assistant, phone
+       |
+       | LoRa radio, 868 MHz
+       v
+   [ node ]  (no WiFi, radio only)
 ```
 
-Адресите по радиото са фиксирани в това ръководство. Не ги променяй, докато не
-проработи:
+The radio addresses are fixed in this guide. Do not change them until it works:
 
-| устройство | негов адрес (`myAddr`) | адрес на другия (`peerAddr`) |
+| device | its own address (`myAddr`) | the other one's address (`peerAddr`) |
 |---|---|---|
-| **гейт** | `00010001` | `00010002` |
-| **възел** | `00010002` | `00010001` |
+| **gateway** | `00010001` | `00010002` |
+| **node** | `00010002` | `00010001` |
 
 ---
 
-## Стъпка 1 - слагане на аддоните
+## Step 1 - fitting the add-ons
 
-1. Изключи бушона.
-2. Щракни по един LoRa аддон върху всеки Shelly. Трябва да влезе **докрай** -
-  усеща се като щракване.
-3. Завинти антените. **Без антена радиото не работи както трябва.**
-4. Пусни бушона.
-
----
-
-## Стъпка 2 - намиране на IP адресите
-
-1. Отвори приложението **Shelly** на телефона, или влез в рутера си и погледни
-  свързаните устройства.
-2. Търси имена, започващи с `Shelly1PMG4-`.
-3. Запиши двата адреса на лист. Изглеждат като `192.168.1.50`.
-
-**Провери ги.** Напиши един от адресите в браузъра. Трябва да се отвори
-страница с менюто на Shelly: `Home`, `Actions`, `Schedules`, `Add-on`,
-`Settings`, `Scripts`, `Components`...
-
-Ако не се отваря - адресът е грешен.
-
-Сега реши кой кой е:
-
-- **гейтът** остава в мрежата
-- **възелът** отива далеч
-
-Запиши си го. Ще ги бъркаш иначе.
+1. Switch off the breaker.
+2. Clip one LoRa add-on onto each Shelly. It has to go in **all the way** - you
+  feel it click.
+3. Screw on the antennas. **Without an antenna the radio does not work
+  properly.**
+4. Switch the breaker back on.
 
 ---
 
-## Стъпка 3 - включване на LoRa аддона
+## Step 2 - finding the IP addresses
 
-Прави се на **двата** Shelly, един по един.
+1. Open the **Shelly** app on your phone, or log into your router and look at
+  the connected devices.
+2. Look for names starting with `Shelly1PMG4-`.
+3. Write both addresses down on paper. They look like `192.168.1.50`.
 
-1. В браузъра отвори (сложи твоя IP вместо `<IP>`):
+**Check them.** Type one of the addresses into a browser. A page with the Shelly
+menu should open: `Home`, `Actions`, `Schedules`, `Add-on`, `Settings`,
+`Scripts`, `Components`...
+
+If it does not open, the address is wrong.
+
+Now decide which is which:
+
+- the **gateway** stays on the network
+- the **node** goes far away
+
+Write it down. You will mix them up otherwise.
+
+---
+
+## Step 3 - enabling the LoRa add-on
+
+Do this on **both** devices, one at a time.
+
+1. In the browser, open (put your own IP instead of `<IP>`):
 
   ```
   http://<IP>/#/addon/manage
   ```
 
-  Или натисни **Add-on** в менюто отляво.
+  Or click **Add-on** in the menu on the left.
 
-2. Пише **"Manage add-on feature"** и има три кръгчета за избор:
+2. It says **"Manage add-on feature"** and offers three choices:
   `None`, `LoRa Add-on`, `Sensor Add-on`.
-3. Избери **LoRa Add-on**.
-4. Натисни **Save and reboot**. Устройството се рестартира, изчакай около
-  половин минута.
+3. Pick **LoRa Add-on**.
+4. Click **Save and reboot**. The device restarts; wait about half a minute.
 
-**Как да провериш, че е станало:** отвори
+**How to check it worked:** open
 
 ```
 http://<IP>/rpc/AddOn.GetInfo
 ```
 
-**Какво трябва да видиш:** ред текст, в който пише `"type":"LoRa"`.
+**What you should see:** a line of text containing `"type":"LoRa"`.
 
-Ако дава грешка - изключи захранването, натисни аддона по-силно, пусни пак.
+If it gives an error, switch the power off, press the add-on in harder, and try
+again.
 
-**Повтори и за другото устройство.**
+**Repeat for the other device.**
 
 ---
 
-## Стъпка 4 - таен ключ
+## Step 4 - the secret key
 
-Двата Shelly трябва да имат **един и същи** таен ключ, за да се разбират.
-Нужни са 16 произволни байта в base64 - това е низ от **24 знака, завършващ на
-`==`**.
+Both devices need **the same** secret key to understand each other. It takes 16
+random bytes in base64 - a string of **24 characters ending in `==`**.
 
-Избери си начин:
+Pick a way:
 
-- **Linux или Mac:** отвори терминал и напиши
+- **Linux or Mac:** open a terminal and type
 
   ```bash
   openssl rand -base64 16
   ```
 
-- **Windows или телефон:** отвори <https://generate.plus/en/base64>, избери
-  16 байта, и вземи резултата.
+- **Windows or phone:** open <https://generate.plus/en/base64>, choose 16
+  bytes, and take the result.
 
-Излиза нещо като:
+You get something like:
 
 ```
 7Qk2Lm9pXvA1bCdEfGhIjQ==
 ```
 
-**Запиши го на лист.** Ще го сложиш на двата Shelly. Ако го загубиш, просто
-правиш нов и повтаряш стъпки 5 и 6.
+**Write it down on paper.** You will put it on both devices. If you lose it,
+just make a new one and repeat steps 5 and 6.
 
-> Ако си на Linux или Mac и искаш стъпки 3 и 4 да станат сами, виж
-> `provision.sh` в края на този файл.
+> On Linux or Mac, `provision.sh` can do steps 3 and 4 for you - see the end of
+> this file.
 
 ---
 
-## Стъпка 5 - скриптът на възела
+## Step 5 - the script on the node
 
-Започваме от **възела** - далечния.
+We start with the **node**, the far one.
 
-1. Отвори `http://<IP-на-възела>/#/scripts` (или **Scripts** в менюто).
-2. Натисни **Add script**.
-3. Отвори файла `lora-gateway.shelly.js` от това репо. Маркирай **всичко**
-  (Ctrl+A), копирай (Ctrl+C), и залепи в прозореца на Shelly (Ctrl+V).
-4. Сега смени **четири реда** горе в кода. Натисни Ctrl+F в прозореца, за да
-  ги намериш:
+1. Open `http://<IP-of-the-node>/#/scripts` (or **Scripts** in the menu).
+2. Click **Add script**.
+3. Open the file `lora-gateway.shelly.js` from this repo. Select **everything**
+  (Ctrl+A), copy it (Ctrl+C), and paste it into the Shelly window (Ctrl+V).
+4. Now change **four lines** near the top of the code. Press Ctrl+F in the
+  window to find them:
 
-  | намери това | смени го на това |
+  | find this | change it to |
   |---|---|
   | `role: 'gateway',` | `role: 'node',` |
   | `peerAddr: '00010002',` | `peerAddr: '00010001',` |
   | `myAddr: '00010001',` | `myAddr: '00010002',` |
-  | `key: 'PUT-THE-SAME-KEY-ON-BOTH',` | `key: 'твоят ключ от стъпка 4',` |
+  | `key: 'PUT-THE-SAME-KEY-ON-BOTH',` | `key: 'your key from step 4',` |
 
-  Внимавай да не изтриеш запетайката и кавичките. Ключът остава **в
-  кавички**. Пример как трябва да изглежда:
+  Be careful not to delete the comma or the quotes. The key stays **inside the
+  quotes**. This is what it should look like:
 
   ```js
   key: '7Qk2Lm9pXvA1bCdEfGhIjQ==',
   ```
 
-5. Дай име на скрипта, например `lora`. Натисни **Save**.
-6. Включи ключето **Run on startup** - за да се пуска сам след рестарт.
-  **Това е важно**, иначе при спиране на тока възелът остава мъртъв.
-7. Натисни **Start**.
+5. Give the script a name, for example `lora`. Click **Save**.
+6. Turn on the **Run on startup** toggle, so it starts by itself after a
+  restart. **This matters** - without it, a power cut leaves the node dead.
+7. Click **Start**.
 
-**Какво трябва да видиш** в черното прозорче долу:
+**What you should see** in the black box at the bottom:
 
 ```
 [LoRa] radio set: addr 00010002 SF 9
 [LoRa] node up, reporting to 00010001
 ```
 
-Скриптът сам си настройва радиото - затова има два реда.
+The script configures its own radio, which is why there are two lines.
 
-Ако вместо това пише:
+If instead it says:
 
-| съобщение | какво значи |
+| message | what it means |
 |---|---|
-| `CONFIG.key is still the placeholder` | Не си сменил ключа в стъпка 4 от таблицата. |
-| `no LoRa component` | Стъпка 3 не е направена на това устройство. |
-| `radio setup failed` | Ключът не е 16 байта. Направи нов. |
+| `CONFIG.key is still the placeholder` | You did not change the key - the fourth row of the table above. |
+| `no LoRa component` | Step 3 was not done on this device. |
+| `radio setup failed` | The key is not 16 bytes. Make a new one. |
 
 ---
 
-## Стъпка 6 - скриптът на гейта
+## Step 6 - the script on the gateway
 
-Същото, но на **гейта**, и тук се сменя **само ключът**.
+The same, but on the **gateway**, and here you change **only the key**.
 
-1. Отвори `http://<IP-на-гейта>/#/scripts` → **Add script**.
-2. Залепи същия файл `lora-gateway.shelly.js`.
-3. Смени **само** един ред:
+1. Open `http://<IP-of-the-gateway>/#/scripts` → **Add script**.
+2. Paste the same `lora-gateway.shelly.js`.
+3. Change **one** line only:
 
-  | намери това | смени го на това |
+  | find this | change it to |
   |---|---|
-  | `key: 'PUT-THE-SAME-KEY-ON-BOTH',` | `key: 'същият ключ',` |
+  | `key: 'PUT-THE-SAME-KEY-ON-BOTH',` | `key: 'the same key',` |
 
-  `role`, `myAddr` и `peerAddr` **остават както са**.
+  `role`, `myAddr` and `peerAddr` **stay as they are**.
 
-4. Име, **Save**, включи **Run on startup**, натисни **Start**.
+4. Name it, **Save**, turn on **Run on startup**, click **Start**.
 
-**Какво трябва да видиш:**
+**What you should see:**
 
 ```
 [LoRa] radio set: addr 00010001 SF 9
@@ -238,141 +242,145 @@ http://<IP>/rpc/AddOn.GetInfo
 
 ---
 
-## Стъпка 7 - проверка, ПРЕДИ да изключиш мрежата
+## Step 7 - check it BEFORE switching the network off
 
-**Не прескачай тази стъпка.** Докато двата са в мрежата, всичко се оправя
-лесно.
+**Do not skip this step.** While both are on the network, everything is easy to
+fix.
 
-### 7.1 Появиха ли се сензорите?
+### 7.1 Did the sensors appear?
 
-Отвори `http://<IP-на-гейта>/#/virtual` (или **Components** в менюто).
+Open `http://<IP-of-the-gateway>/#/virtual` (or **Components** in the menu).
 
-**Какво трябва да видиш:** 10 нови неща, всички започващи с `Node`:
+**What you should see:** 10 new things, all starting with `Node`:
 
-| име | какво показва |
+| name | what it shows |
 |---|---|
-| Node Output | ключът на възела - и се натиска оттук |
-| Node Link | има ли връзка |
-| Node Power | ватове |
-| Node Voltage | волтове |
-| Node Current | ампери |
-| Node Energy | изхабена енергия |
-| Node Temperature | температура |
-| Node RSSI | колко силен е сигналът |
-| Node SNR | колко чист е сигналът |
-| Node Seq | брояч на съобщенията |
+| Node Output | the node's switch - and you can press it from here |
+| Node Link | whether there is a connection |
+| Node Power | watts |
+| Node Voltage | volts |
+| Node Current | amps |
+| Node Energy | energy used |
+| Node Temperature | temperature |
+| Node RSSI | how strong the signal is |
+| Node SNR | how clean the signal is |
+| Node Seq | a message counter |
 
-Първото съобщение идва до няколко секунди. `Node Voltage` трябва да показва
-около 230, а `Node Link` да е включен.
+The first message arrives within a few seconds. `Node Voltage` should show
+around 230, and `Node Link` should be on.
 
-### 7.2 Работи ли управлението?
+### 7.2 Does the control work?
 
-Натисни **Node Output**.
+Press **Node Output**.
 
-**Какво трябва да видиш:** релето на **възела** щраква след около 2 секунди, и
-`Node Seq` се увеличава. Натисни пак - връща се.
+**What you should see:** the relay on the **node** clicks after about 2 seconds,
+and `Node Seq` goes up. Press it again and it goes back.
 
-### 7.3 Достатъчен ли е сигналът?
+### 7.3 Is the signal good enough?
 
-Погледни **Node RSSI**:
+Look at **Node RSSI**:
 
-| RSSI | значение |
+| RSSI | meaning |
 |---|---|
-| от -30 до -90 | много добре |
-| от -90 до -110 | работи, но на границата |
-| под -115 | няма да е надеждно - премести антената или устройството |
+| -30 to -90 | very good |
+| -90 to -110 | works, but marginal |
+| below -115 | will not be reliable - move the antenna or the device |
 
-Ако тук не работи, **не продължавай** - виж таблицата с проблеми накрая.
-
----
-
-## Стъпка 8 - изключване на мрежата на възела
-
-Това е смисълът на упражнението. След тази стъпка възелът **изчезва от
-мрежата**.
-
-### 8.1 Първо резервният вход
-
-Слагаме парола на собствената точка за достъп на възела. Това е начинът да
-влезеш, ако радиото не стигне. Фърмуерът няма да пусне точка без парола.
-
-1. Отвори `http://<IP-на-възела>/#/settings/access-point`
-2. Пише **"Access point and range extender settings"**.
-3. Включи чекбокса **Enable access point**.
-4. В полето **Password** напиши парола - поне 8 знака. **Запиши я на лист.**
-5. Натисни **Save**.
-
-### 8.2 Сега изключваме WiFi-а
-
-Отвори това в браузъра, като смениш само IP адреса:
-
-```
-http://<IP-на-възела>/rpc/Wifi.SetConfig?config=%7B%22sta%22%3A%7B%22enable%22%3Afalse%7D%7D
-```
-
-Изглежда страшно, но е просто "изключи WiFi клиента", написано така, че
-браузърът да не го обърка. Копирай го точно както е.
-
-**Какво трябва да видиш:** `{"restart_required":false}` - и после страницата
-спира да отговаря. **Това е нормално и значи, че е станало.**
-
-> Правим го с този адрес, а не от менюто **Settings → Wi-Fi**, защото така със
-> сигурност се запазват името и паролата на WiFi мрежата. Те трябват, за да
-> може възелът да се върне после.
-
-### 8.3 Проверка
-
-1. Напиши IP адреса на възела в браузъра. **Не трябва да се отваря.**
-2. Отвори `http://<IP-на-гейта>/#/virtual`. Сензорите `Node ...` трябва да
-  продължават да се обновяват и `Node Link` да е включен.
-3. Натисни **Node Output**. Релето на възела трябва да щракне.
-
-**Готово.** Възелът може да отиде на мястото си.
+If it does not work here, **do not go on** - see the troubleshooting table at
+the end.
 
 ---
 
-## Как се ползва оттук насетне
+## Step 8 - switching the node's network off
 
-Всичко минава през **гейта**. Възелът не го пипаш повече.
+This is the whole point of the exercise. After this step the node **disappears
+from the network**.
 
-- **Home Assistant:** Settings → Devices & Services → Add integration →
-  Shelly → IP адреса на **гейта**. Донася и своите сензори, и десетте на
-  възела. Ключът на възела излиза като обикновен `switch`.
-- **Приложението Shelly:** същото, виждаш го при гейта.
-- Възелът **не може** да се добави отделно никъде. Той няма адрес. Това не е
-  недостатък, това е идеята.
+### 8.1 The way back in, first
 
-На началната страница на гейта има панел **LoRa (100)** с `Air time`. Това е
-колко време радиото предава. Трябва да е под **1%**.
+We put a password on the node's own access point. That is how you get in if the
+radio does not reach it. The firmware will not enable an access point without a
+password.
+
+1. Open `http://<IP-of-the-node>/#/settings/access-point`
+2. It says **"Access point and range extender settings"**.
+3. Tick **Enable access point**.
+4. In the **Password** field type a password - at least 8 characters.
+  **Write it down on paper.**
+5. Click **Save**.
+
+### 8.2 Now switch the WiFi off
+
+Open this in the browser, changing only the IP address:
+
+```
+http://<IP-of-the-node>/rpc/Wifi.SetConfig?config=%7B%22sta%22%3A%7B%22enable%22%3Afalse%7D%7D
+```
+
+It looks frightening but it is just "switch the WiFi client off", written so the
+browser cannot mangle it. Copy it exactly as it is.
+
+**What you should see:** `{"restart_required":false}` - and then the page stops
+responding. **That is normal and means it worked.**
+
+> We do it with this address rather than from the **Settings → Wi-Fi** menu,
+> because this way the WiFi network name and password are certainly kept. They
+> are needed for the node to come back later.
+
+### 8.3 Check
+
+1. Type the node's IP address into the browser. **It should not open.**
+2. Open `http://<IP-of-the-gateway>/#/virtual`. The `Node ...` sensors should
+  keep updating and `Node Link` should stay on.
+3. Press **Node Output**. The node's relay should click.
+
+**Done.** The node can go to where it belongs.
 
 ---
 
-## Ако нещо стане - как се връща възелът
+## Using it from now on
 
-Възелът няма мрежа, но **не е загубен**. Две възможности.
+Everything goes through the **gateway**. You do not touch the node again.
 
-### 1. По радиото, без да ходиш до него
+- **Home Assistant:** Settings → Devices & Services → Add integration → Shelly
+  → the **gateway's** IP address. It brings in both its own sensors and the
+  node's ten. The node's switch shows up as an ordinary `switch`.
+- **The Shelly app:** the same, you see it on the gateway.
+- The node **cannot** be added anywhere on its own. It has no address. That is
+  not a shortcoming, that is the idea.
 
-Отвори това в браузъра, като смениш само IP-то с това на **гейта**:
+The gateway's home page has a **LoRa (100)** panel showing `Air time`. That is
+how much of the time the radio is transmitting. It must stay below **1%**.
+
+---
+
+## If something goes wrong - getting the node back
+
+The node has no network, but it is **not lost**. Two ways.
+
+### 1. Over the radio, without walking over to it
+
+Open this in the browser, changing only the IP to the **gateway's**:
 
 ```
-http://<IP-на-гейта>/rpc/LoRa.Send?id=100&lr_addr=%2200010002%22&data=Q3x3fA%3D%3D
+http://<IP-of-the-gateway>/rpc/LoRa.Send?id=100&lr_addr=%2200010002%22&data=Q3x3fA%3D%3D
 ```
 
-Онова накрая е командата "включи си WiFi-а". Възелът си пуска WiFi-а и се
-рестартира.
+That thing at the end is the command "switch your WiFi back on". The node turns
+its WiFi on and reboots.
 
-**Какво трябва да видиш:** `null`. Това значи, че командата е приета.
+**What you should see:** `null`. That means the command was accepted.
 
-Измерено: възелът се връща в мрежата за **около 9 секунди**, на стария си IP
-адрес. Името и паролата на WiFi мрежата му са запазени.
+Measured: the node is back on the network in **about 9 seconds**, on its old IP
+address. Its WiFi network name and password are kept.
 
-Ако нищо не стане - пробвай втори път. Радиото понякога изпуска съобщение.
+If nothing happens, try a second time. The radio does drop a message now and
+then.
 
-### 2. През собствената му точка за достъп
+### 2. Through its own access point
 
-Ако радиото не стига - иди до възела, намери WiFi мрежа с име
-`Shelly1PMG4-...`, свържи се с паролата от стъпка 8.1, и отвори в браузъра:
+If the radio does not reach - walk over to the node, look for a WiFi network
+called `Shelly1PMG4-...`, connect with the password from step 8.1, and open:
 
 ```
 http://192.168.33.1
@@ -380,100 +388,102 @@ http://192.168.33.1
 
 ---
 
-## Проблеми и какво да правиш
+## Troubleshooting
 
-| проблем | какво да правиш |
+| problem | what to do |
 |---|---|
-| `AddOn.GetInfo` дава грешка | Изключи захранването. Натисни аддона докрай. Пусни пак. |
-| В скрипта: `no LoRa component` | Стъпка 3 не е направена на това устройство. |
-| В скрипта: `CONFIG.key is still the placeholder` | Не си сменил ключа. Виж стъпка 5, точка 4. |
-| В скрипта: `radio setup failed` | Ключът не е 16 байта. Трябва 24 знака, завършващи на `==`. Направи нов и го сложи на **двата**. |
-| Сензорите `Node ...` ги няма | Скриптът на гейта не е стартиран или е спрял. Отвори **Scripts** на гейта. |
-| Сензорите ги има, но са нули и `Node Link` е изключен | Двата не се чуват. Провери: същият ключ на двата? различни `myAddr`? антените сложени ли са? |
-| Натискам `Node Output`, нищо не става | Изчакай 15 секунди - прави 3 опита. Ако ключът се върне сам назад, възелът не отговаря. |
-| Скриптът спира сам | Отвори **Scripts**, прочети грешката, и я пиши в Issues на това репо. |
-| Работеше, после спря | Погледни `Node Seq`. Ако не се мени от минути - възелът е без ток или скриптът му е спрял. |
-| `Air time` е над 1% | Нещо праща прекалено често. Върни `heartbeatMs` на `120000`. |
-| Искам да махна всичко | Спри и изтрий скриптовете. Десетте виртуални компонента **остават** - трий ги на ръка от **Components**. |
+| `AddOn.GetInfo` gives an error | Switch the power off. Press the add-on in all the way. Power up again. |
+| In the script: `no LoRa component` | Step 3 was not done on this device. |
+| In the script: `CONFIG.key is still the placeholder` | You did not change the key. See step 5, point 4. |
+| In the script: `radio setup failed` | The key is not 16 bytes. It needs 24 characters ending in `==`. Make a new one and put it on **both**. |
+| The `Node ...` sensors are missing | The gateway's script is not running, or it stopped. Open **Scripts** on the gateway. |
+| The sensors are there but all zero and `Node Link` is off | The two cannot hear each other. Check: the same key on both? different `myAddr`? antennas fitted? |
+| I press `Node Output` and nothing happens | Wait 15 seconds - it makes 3 attempts. If the switch flips back by itself, the node is not answering. |
+| The script stops by itself | Open **Scripts**, read the error, and post it in this repo's Issues. |
+| It worked, then stopped | Look at `Node Seq`. If it has not moved for minutes, the node has no power or its script stopped. |
+| `Air time` is above 1% | Something is transmitting too often. Put `heartbeatMs` back to `120000`. |
+| I want to remove everything | Stop and delete the scripts. The ten virtual components **stay** - delete them by hand from **Components**. |
 
 ---
 
-## Какво това НЕ прави
+## What this does NOT do
 
-Честно, за да не се чудиш:
+Honestly, so you do not wonder:
 
-- **Пренася само ключа и мерените стойности.** Входовете, графиците и другите
-  настройки на възела не се виждат.
-- **Един възел на един гейт.** За повече трябва промяна в кода.
-- **Бавно е.** Около 2 секунди от натискане до щракване. LoRa е такова радио.
-- **Не е за неща, които трябват веднага.** Не го слагай на нещо, при което 2
-  секунди закъснение или едно пропуснато съобщение е проблем.
-- **Не е заместител на WiFi.** Пренася няколко числа на всеки 2 минути, не
-  видео.
-- **Стойностите се обновяват на 2 минути**, не постоянно. Така е нарочно - виж
-  долу.
-
----
-
-## Защо някои неща са нарочно така
-
-- **Съобщенията се повтарят.** LoRa няма потвърждение, а радиото не може
-  едновременно да слуша и да говори. Затова команда, пратена точно когато
-  възелът предава, се губи. Гейтът праща пак, до 3 пъти, и приема отчета на
-  възела за потвърждение. Ако все пак не стане, връща ключа на истинското
-  състояние, вместо да показва лъжа.
-- **Отчет на всеки 2 минути, а не на всяка секунда.** Законът позволява на
-  радиото да предава 1% от времето - това са 36 секунди на час. Един отчет е
-  0.317 секунди въздух. На всеки 2 минути това е 30 отчета, или 9.5 секунди на
-  час - значи **26% от разрешените 36 секунди**, при обща заетост 0.26%. Ако
-  беше на всяка минута, ставаше 19 секунди, или **53%** от разрешеното, и не
-  оставаше място за командите и повторенията.
-- **Стойностите се пишат по вътрешен път.** Един скрипт в Shelly може да има
-  само **5 едновременни заявки**. Шестата хвърля грешка и **убива скрипта**.
-  Десет сензора на заявки не се получава.
+- **It carries only the switch and the measured values.** The node's inputs,
+  schedules and other settings are not visible.
+- **One node per gateway.** More than that needs a change in the code.
+- **It is slow.** About 2 seconds from pressing to clicking. That is what LoRa
+  is like.
+- **It is not for things that must happen now.** Do not put it on something
+  where a 2 second delay or one dropped message is a problem.
+- **It is not a WiFi replacement.** It carries a few numbers every 2 minutes,
+  not video.
+- **Values update every 2 minutes**, not continuously. That is deliberate - see
+  below.
 
 ---
 
-## Настройки, които можеш да пипаш
+## Why some things are the way they are
 
-Горе в скрипта, в блока `CONFIG`:
+- **Messages get repeated.** LoRa has no acknowledgement, and the radio cannot
+  listen and talk at the same time. So a command sent exactly while the node is
+  transmitting is lost. The gateway sends it again, up to 3 times, and treats
+  the node's own report as the acknowledgement. If it still does not land, it
+  writes the switch back to the real state instead of showing you a lie.
+- **A report every 2 minutes, not every second.** The law allows the radio to
+  transmit 1% of the time - that is 36 seconds per hour. One report is 0.317
+  seconds of air time. Every 2 minutes means 30 reports, or 9.5 seconds per hour
+  - so **26% of the allowed 36 seconds**, at an overall duty of 0.26%. Every
+  minute would be 19 seconds, or **53%** of the allowance, leaving no room for
+  the commands and the retries.
+- **The values are written by an internal path.** A Shelly script may only have
+  **5 requests in flight at once**. The sixth throws an error and **kills the
+  script**. Ten sensors over requests does not work.
 
-| настройка | какво прави | внимавай |
+---
+
+## Settings you can change
+
+At the top of the script, in the `CONFIG` block:
+
+| setting | what it does | watch out |
 |---|---|---|
-| `radio.dr` | 7 = бързо и близо, 12 = бавно и далеч. По подразбиране 9. | По-малко число = по-малко обхват |
-| `heartbeatMs` | колко често възелът праща. По подразбиране 120000 (2 минути). | По-често = повече air time. Не слизай под 60000, освен ако не намалиш `dr` |
-| `offlineMs` | след колко тишина `Node Link` се изключва. | Трябва да е над два пъти `heartbeatMs` |
-| `retries` | колко пъти се повтаря команда. По подразбиране 3. | |
-| `vcBaseId` | от кой номер започват виртуалните компоненти. По подразбиране 200. | Смени го, ако вече имаш свои виртуални компоненти с номера 200-207 - иначе скриптът ще ползва тях |
+| `radio.dr` | 7 = fast and near, 12 = slow and far. Default 9. | A lower number means less range |
+| `heartbeatMs` | how often the node reports. Default 120000 (2 minutes). | More often means more air time. Do not go below 60000 unless you also lower `dr` |
+| `offlineMs` | how much silence before `Node Link` goes off. | Must be more than twice `heartbeatMs` |
+| `retries` | how many times a command is repeated. Default 3. | |
+| `vcBaseId` | the first id for the virtual components. Default 200. | Change it if you already have your own virtual components numbered 200-207 - otherwise the script will use those |
 
 ---
 
-## Тествано на
+## Tested on
 
 | | |
 |---|---|
-| устройства | 2 x Shelly 1 PM Gen4 (`S4SW-001P16EU`) |
-| фърмуер | 2.0.0 |
-| аддон | Shelly LoRa Add-On, фърмуер 2.0.1, хардуер 1.4.0/2520 |
-| радио | EU868, 868.1 MHz, SF9, 14 dBm |
-| сигнал | RSSI -25 dBm, SNR 11 |
-| управление | 12 от 12 команди успешни, средно 2.5 секунди |
-| радиовръзка | 0 изгубени кадъра от 20 на свободен канал |
+| devices | 2 x Shelly 1 PM Gen4 (`S4SW-001P16EU`) |
+| firmware | 2.0.0 |
+| add-on | Shelly LoRa Add-On, firmware 2.0.1, hardware 1.4.0/2520 |
+| radio | EU868, 868.1 MHz, SF9, 14 dBm |
+| signal | RSSI -25 dBm, SNR 11 |
+| control | 12 of 12 commands confirmed, 2.5 s median |
+| radio link | 0 frames lost out of 20 on an idle channel |
 
 ---
 
-## Файлове
+## Files
 
-| файл | за какво е |
+| file | what it is for |
 |---|---|
-| `lora-gateway.shelly.js` | скриптът. Качва се на **двата** Shelly, с различен `role` |
-| `provision.sh` | по избор, за Linux/Mac: включва аддона и прави ключа вместо теб |
-| `lora-key.txt` | тайният ключ, ако си ползвал `provision.sh`. **Не го качвай никъде** |
-| `ha-bridge/` | по-старият вариант на същото, с два отделни скрипта и инсталатор на Python. За Home Assistant и за хора, които са свикнали с команден ред. Не ти трябва, ако следваш горното ръководство |
+| `lora-gateway.shelly.js` | the script. Goes on **both** devices, with a different `role` |
+| `provision.sh` | optional, Linux/Mac: enables the add-on and makes the key for you |
+| `lora-key.txt` | the secret key, if you used `provision.sh`. **Do not upload it anywhere** |
+| `README.bg.md` | the same guide in Bulgarian |
+| `ha-bridge/` | the older version of the same thing, with two separate scripts and a Python installer. For Home Assistant, and for people used to a command line. You do not need it if you follow the guide above |
 
 ### provision.sh
 
-Върши стъпки 3 и 4 вместо теб:
+Does steps 3 and 4 for you:
 
 ```bash
 git clone https://github.com/drHouse-gif/shelly-lora-gateway.git
@@ -482,9 +492,10 @@ chmod +x provision.sh
 ./provision.sh 192.168.1.50 192.168.1.51
 ```
 
-Първият адрес е гейтът, вторият - възелът. Накрая показва реда с ключа, който
-да сложиш в скрипта. Може да се пуска колкото пъти искаш.
+The first address is the gateway, the second the node. At the end it prints the
+line with the key to put into the script. You can run it as many times as you
+like.
 
-## Лиценз
+## Licence
 
-Apache 2.0 - виж `LICENSE`.
+Apache 2.0 - see `LICENSE`.
