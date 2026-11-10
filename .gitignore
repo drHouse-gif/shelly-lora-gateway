@@ -1,0 +1,10 @@
+# Secrets. Never commit these.
+lora-key.txt
+ha-bridge/aes.key
+ha-bridge/ap-password.txt
+
+# Local machine addresses.
+ha-bridge/ips.env
+
+__pycache__/
+*.pyc
