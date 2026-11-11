@@ -462,7 +462,7 @@ At the top of the script, in the `CONFIG` block:
 | | |
 |---|---|
 | devices | 2 x Shelly 1 PM Gen4 (`S4SW-001P16EU`) |
-| firmware | 2.0.0 |
+| firmware | brought up on 2.0.0; the gateway also verified on 2.1.1 |
 | add-on | Shelly LoRa Add-On, firmware 2.0.1, hardware 1.4.0/2520 |
 | radio | EU868, 868.1 MHz, SF9, 14 dBm |
 | signal | RSSI -25 dBm, SNR 11 |

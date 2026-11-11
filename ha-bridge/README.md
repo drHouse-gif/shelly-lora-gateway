@@ -177,10 +177,18 @@ else is polling it.
 
 ## Known limits
 
-- Device firmware 2.0.0 is installed; **2.1.1 is available**. Not applied - the
-  pair is working and an OTA mid-bring-up buys nothing. 2.1.1 may split SheLr
-  into its own `shelr:2xx` component and add the `rpc` payload type, which would
-  allow real RPC over LoRa instead of this hand-rolled protocol.
+- The pair was brought up on device firmware 2.0.0. The gateway has since
+  updated itself to **2.1.1** (`20261026-151324/2.1.1-g07e9ad2`) and the LoRa
+  layer is **unchanged**: still `lora:100` with `shelr` nested in its config,
+  still no separate `shelr` component and no `SheLr.*` RPC namespace, and
+  `shelr.accept` still rejects anything but `user` - setting
+  `["user","rpc"]` answers `'rpc' not in allowed values: 'user'`. So there is
+  still no RPC over LoRa on 2.1.1 and this hand-rolled protocol is still the
+  way across. The script kept running through the update. One cosmetic change:
+  `LoRa.GetStatus` on 2.1.1 no longer carries the `available_updates` field it
+  had on 2.0.0.
+- The slave cannot reach the internet, so it stays on 2.0.0. The pair therefore
+  runs **mismatched - gateway 2.1.1, slave 2.0.0 - and works**.
 - Only the slave's output is controllable from HA. Its input, schedules and
   everything else are not mirrored.
 - `aenergy.total` is sent as whole Wh, so the HA sensor is in Wh while the
