@@ -46,7 +46,7 @@ for the software part.
 ## What you need
 
 - **2 Shelly devices** that support the LoRa add-on. Tested on
-  **Shelly 1 PM Gen4**, firmware **2.0.0**.
+  **Shelly 1 PM Gen4**, firmware **2.0.0** and **2.1.1**.
 - **2 Shelly LoRa Add-Ons**, with their antennas.
 - A computer or phone with a browser, on the same network as both Shelly
   devices.
